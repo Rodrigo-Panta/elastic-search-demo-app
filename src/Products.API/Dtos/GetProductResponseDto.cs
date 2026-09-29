@@ -1,0 +1,2 @@
+public record GetProductResponseDto (int Id, string Name, string Description, decimal Price, int Stock, DateTime CreatedAt, GetProductCategoryResponseDto category);
+public record GetProductCategoryResponseDto (int id, string name);
