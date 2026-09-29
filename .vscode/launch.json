@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "dotnet: build",
+      "name": ".Net Launch",
+      "envFile": "${workspaceFolder}/src/Products.API/.env",
+      "program": "${workspaceFolder}/src/Products.API/bin/Debug/net10.0/Products.API.dll"
+    }
+  ]
+}
