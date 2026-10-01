@@ -157,7 +157,7 @@
 			]
 		},
 		{
-			"name": "Check Indexes",
+			"name": "Check Indices",
 			"request": {
 				"auth": {
 					"type": "noauth"
