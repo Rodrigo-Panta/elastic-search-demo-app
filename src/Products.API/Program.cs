@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Products.API.Data.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
+using Microsoft.AspNetCore.Mvc;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,14 +10,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
+builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddLogging(configure =>
             {
                 configure.AddConsole();
                 configure.SetMinimumLevel(LogLevel.Information);
             });
 
-var postgreConnectionString = GetEnvironmentVariableOrThrow("POSTGRESQL_CONNECTION_STRING");
 
+
+var postgreConnectionString = GetEnvironmentVariableOrThrow("POSTGRESQL_CONNECTION_STRING");
 builder.Services.AddDbContext<ProductsDbContext>(options => options.UseNpgsql(postgreConnectionString));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
@@ -24,7 +29,11 @@ var elasticSearchSettings = new ElasticsearchClientSettings(new Uri(GetEnvironme
     .Authentication(new ApiKey("ELASTICSEARCH_APIKEY"));
 
 builder.Services.AddSingleton(serviceProvider => new ElasticsearchClient(elasticSearchSettings));
-builder.Services.AddScoped<ElasticSearchProductIndexer>();
+builder.Services.AddScoped<IProductIndexer, ElasticSearchProductIndexer>();
+
+builder.Services.AddSingleton<EventChannel<ProductCreatedEvent>>();
+builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+builder.Services.AddHostedService<ProductCreatedEventConsumer>();
 
 var app = builder.Build();
 
@@ -32,18 +41,30 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
+var productsGroup = app.MapGroup("/products");
 
-app.MapPost("/products/indices", async (ElasticSearchProductIndexer indexer) =>
+
+productsGroup.MapPost("/indices", async (IProductIndexer indexer) =>
 {
-    await indexer.CreateIndexIdepotent();
+    await indexer.CreateIndexIdepotentAsync();
 
 });
 
-app.MapGet("/products/{id}", async (int id, IProductRepository repository) =>
+productsGroup.MapPost("/", async (IProductRepository repository,IEventBus eventBus, [FromBody] CreateProductRequestDto request) =>
+{
+    var product = await repository.CreateProduct(request);
+    await eventBus.Publish(new ProductCreatedEvent(product.Id));
+});
+
+
+
+productsGroup.MapGet("/{id}", async (int id, IProductRepository repository) =>
 {
     var result = await repository.GetById(id);
     if (result == null) return Results.NotFound();
@@ -51,6 +72,8 @@ app.MapGet("/products/{id}", async (int id, IProductRepository repository) =>
     var response = new GetProductResponseDto(result.Id, result.Name, result.Description, result.Price, result.Stock, result.Createdat, new GetProductCategoryResponseDto(result.Category.Id, result.Category.Name));
     return Results.Ok(response);
 });
+
+
 
 app.Run();
 
