@@ -1,8 +1,9 @@
+using Products.API.Data.Models;
+
 public interface IProductIndexer 
 {
-    Task CreateIndexIdepotent();
-    
-    
+    Task CreateIndexIdepotentAsync();
+    Task AddDocumetentAsync(int productId);
 
 }
 

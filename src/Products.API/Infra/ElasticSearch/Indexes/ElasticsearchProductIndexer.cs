@@ -1,13 +1,23 @@
 using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.Nodes;
 using Products.API.Data.Models;
 
-public class ElasticSearchProductIndexer(ElasticsearchClient client, ILogger<ElasticSearchProductIndexer> logger, IProductRepository repository) : IProductIndexer
+public class ElasticSearchProductIndexer(
+    ElasticsearchClient client,
+    ILogger<ElasticSearchProductIndexer> logger,
+    IProductRepository repository) : IProductIndexer
 {
 
     private const int INDEX_CREATION_PAGE_SIZE = 500;
     private const string INDEX_NAME = "products";
 
-    public async Task CreateIndexIdepotent()
+    public async Task AddDocumetentAsync(int productId)
+    {
+        var product = await repository.GetById(productId);
+        await client.IndexAsync(product, x => x.Index(INDEX_NAME));
+    }
+
+    public async Task CreateIndexIdepotentAsync()
     {
         try
         {
@@ -24,7 +34,7 @@ public class ElasticSearchProductIndexer(ElasticsearchClient client, ILogger<Ela
                     .IndexMany(result.Values));
 
                 processed += result.Values.Count();
-                if(result.lastId == null) break; //check
+                if (result.lastId == null) break; //check
 
                 result = await repository.GetPaged(new PagedRequest(INDEX_CREATION_PAGE_SIZE, result.lastId ?? 0));
             }
