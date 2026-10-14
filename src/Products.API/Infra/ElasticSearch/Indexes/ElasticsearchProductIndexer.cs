@@ -14,7 +14,25 @@ public class ElasticSearchProductIndexer(
     public async Task AddDocumetentAsync(int productId)
     {
         var product = await repository.GetById(productId);
-        await client.IndexAsync(product, x => x.Index(INDEX_NAME));
+
+        if(product == null)
+        {
+            logger.LogError($"Failed to index Product {productId} on Elastic Search");
+            return;
+        }
+
+        var dto = new ProductDocumentDto(
+            product.Id,
+            product.Name,
+            product.Description,
+            product.Categoryid,
+            product.Category.Name,
+            product.Price,
+            product.Stock,
+            product.Createdat
+        );
+
+        await client.IndexAsync(dto, x => x.Index(INDEX_NAME));
     }
 
     public async Task CreateIndexIdepotentAsync()
@@ -29,9 +47,21 @@ public class ElasticSearchProductIndexer(
 
             while (processed < result.totalCount)
             {
+
+                List<ProductDocumentDto> dtos = result.Values.Select(p => new ProductDocumentDto(
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    p.Categoryid,
+                    p.Category.Name,
+                    p.Price,
+                    p.Stock,
+                    p.Createdat
+                )).ToList();
+
                 await client.BulkAsync(b => b
                     .Index(INDEX_NAME)
-                    .IndexMany(result.Values));
+                    .IndexMany(dtos));
 
                 processed += result.Values.Count();
                 if (result.lastId == null) break; //check

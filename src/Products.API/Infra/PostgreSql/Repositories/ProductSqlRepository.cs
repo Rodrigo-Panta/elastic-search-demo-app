@@ -30,7 +30,7 @@ public class ProductRepository(ProductsDbContext dbContext) : IProductRepository
 
     public async Task<PagedResult<Product>> GetPaged(PagedRequest request)
     {
-        var result = await dbContext.Products.OrderBy(p => p.Id).Where(p => p.Id > request.lastId).Take(request.pageSize).ToListAsync();
+        var result = await dbContext.Products.OrderBy(p => p.Id).Where(p => p.Id > request.lastId).Take(request.pageSize).Include(p => p.Category).ToListAsync();
         var count = await dbContext.Products.CountAsync();
         return new PagedResult<Product>(result, result.LastOrDefault()?.Id, count);
     }
