@@ -1,8 +1,8 @@
 public record ProductDocumentDto(                 
-    int Id,
-    string Name,
-    string Description,
-    int CategoryId,
+    int id,
+    string name,
+    string description,
+    int categoryId,
     string category,
     decimal price,
     int stock,

@@ -63,6 +63,13 @@ productsGroup.MapPost("/", async (IProductRepository repository,IEventBus eventB
 });
 
 
+productsGroup.MapGet("/search",
+                     async ([AsParameters] SearchProductQueryDto query, IProductIndexer indexer) =>
+{
+    var response = await indexer.SearchAsync(query);
+
+    return Results.Ok(response);
+});
 
 productsGroup.MapGet("/{id}", async (int id, IProductRepository repository) =>
 {
