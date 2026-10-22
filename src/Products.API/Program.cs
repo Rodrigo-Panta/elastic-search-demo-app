@@ -3,6 +3,8 @@ using Products.API.Data.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,8 +21,6 @@ builder.Services.AddLogging(configure =>
                 configure.SetMinimumLevel(LogLevel.Information);
             });
 
-
-
 var postgreConnectionString = GetEnvironmentVariableOrThrow("POSTGRESQL_CONNECTION_STRING");
 builder.Services.AddDbContext<ProductsDbContext>(options => options.UseNpgsql(postgreConnectionString));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -35,6 +35,20 @@ builder.Services.AddSingleton<EventChannel<ProductCreatedEvent>>();
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddHostedService<ProductCreatedEventConsumer>();
 
+builder.Services
+    .AddHealthChecks()
+    .AddCheck(
+        "self",
+        () => HealthCheckResult.Healthy(),
+        tags: ["live"])
+    .AddNpgSql(
+        postgreConnectionString,
+        name: "postgres",
+        tags: ["ready"])
+    .AddCheck<ElasticsearchHealthCheck>(
+         "elasticsearch",
+        tags: ["ready"]);
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -47,8 +61,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var productsGroup = app.MapGroup("/products");
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live")
+});
 
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+var productsGroup = app.MapGroup("/products");
 
 productsGroup.MapPost("/indices", async (IProductIndexer indexer) =>
 {
@@ -61,7 +84,6 @@ productsGroup.MapPost("/", async (IProductRepository repository,IEventBus eventB
     var product = await repository.CreateProduct(request);
     await eventBus.Publish(new ProductCreatedEvent(product.Id));
 });
-
 
 productsGroup.MapGet("/search",
                      async ([AsParameters] SearchProductQueryDto query, IProductIndexer indexer) =>
