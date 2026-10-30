@@ -25,6 +25,8 @@ var postgreConnectionString = GetEnvironmentVariableOrThrow("POSTGRESQL_CONNECTI
 builder.Services.AddDbContext<ProductsDbContext>(options => options.UseNpgsql(postgreConnectionString));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
+
+
 var elasticSearchSettings = new ElasticsearchClientSettings(new Uri(GetEnvironmentVariableOrThrow("ELASTICSEARCH_ENDPOINT")))
     .Authentication(new ApiKey("ELASTICSEARCH_APIKEY"));
 
@@ -71,7 +73,9 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = check => check.Tags.Contains("ready")
 });
 
-var productsGroup = app.MapGroup("/products");
+app.MapGet("/api", () => $"Products Api - Version: {Environment.GetEnvironmentVariable("APP_VERSION")}");
+
+var productsGroup = app.MapGroup("/api/products");
 
 productsGroup.MapPost("/indices", async (IProductIndexer indexer) =>
 {
@@ -101,8 +105,6 @@ productsGroup.MapGet("/{id}", async (int id, IProductRepository repository) =>
     var response = new GetProductResponseDto(result.Id, result.Name, result.Description, result.Price, result.Stock, result.Createdat, new GetProductCategoryResponseDto(result.Category.Id, result.Category.Name));
     return Results.Ok(response);
 });
-
-
 
 app.Run();
 
