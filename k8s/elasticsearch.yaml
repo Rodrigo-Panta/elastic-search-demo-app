@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: products
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata: 
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:9.5.4
+          ports:
+            - name: http
+              containerPort: 9200
+          env:
+            - name: discovery.type
+              valueFrom:
+                configMapKeyRef:
+                  name: products-config
+                  key: ES_DISCOVERY_TYPE   
+            - name: xpack.security.enabled
+              valueFrom:
+                configMapKeyRef:
+                  name: products-config
+                  key: ES_SECURITY_ENABLED
+            - name: ES_JAVA_OPTS
+              valueFrom:
+                configMapKeyRef:
+                  name: products-config
+                  key: ES_JAVA_OPTS
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              memory: "2Gi"
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: products
+spec:
+  type: ClusterIP
+  selector:
+    app: elasticsearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
