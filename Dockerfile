@@ -1,6 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /App
 
+
 # Copy everything
 COPY ./src/ ./
 # Restore as distinct layers
@@ -10,6 +11,10 @@ RUN dotnet publish Products.API -o out
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+
+ARG APP_VERSION=1.0.0
+ENV APP_VERSION=${APP_VERSION}
+
 WORKDIR /App
 COPY --from=build /App/out .
 ENTRYPOINT ["dotnet", "Products.API.dll"]
