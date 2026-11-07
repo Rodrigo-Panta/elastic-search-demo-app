@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using Products.Domain;
 
 namespace Products.API.Data.Models;
 
-public partial class Product
+public partial class ProductModel
 {
     public int Id { get; set; }
 
@@ -19,5 +20,11 @@ public partial class Product
 
     public DateTime Createdat { get; set; }
 
-    public virtual Category Category { get; set; } = null!;
+    public virtual CategoryModel Category { get; set; } = null!;
+
+
+    public Product ToEntity()
+    {
+        return new Product(Id, Name, Description, new Category(Category.Id, Category.Name), new Price(Price), new Stock(Stock), Createdat);
+    }
 }

@@ -2,6 +2,7 @@ using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Nodes;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Products.API.Data.Models;
+using Products.Domain;
 
 public class ElasticSearchProductIndexer(
     ElasticsearchClient client,
@@ -27,11 +28,11 @@ public class ElasticSearchProductIndexer(
             product.Id,
             product.Name,
             product.Description,
-            product.Categoryid,
+            product.Category.Id,
             product.Category.Name,
-            product.Price,
-            product.Stock,
-            product.Createdat
+            product.Price.Value,
+            product.Stock.Value,
+            product.CreatedAt
         );
 
         await client.IndexAsync(dto, x => x.Index(INDEX_NAME));
@@ -45,6 +46,7 @@ public class ElasticSearchProductIndexer(
             await client.Indices.CreateAsync(INDEX_NAME);
 
             PagedResult<Product> result = await repository.GetPaged(new PagedRequest(INDEX_CREATION_PAGE_SIZE, 0));
+
             long processed = 0;
 
             while (processed < result.totalCount)
@@ -54,11 +56,11 @@ public class ElasticSearchProductIndexer(
                     p.Id,
                     p.Name,
                     p.Description,
-                    p.Categoryid,
+                    p.Category.Id,
                     p.Category.Name,
-                    p.Price,
-                    p.Stock,
-                    p.Createdat
+                    p.Price.Value,
+                    p.Stock.Value,
+                    p.CreatedAt
                 )).ToList();
 
                 await client.BulkAsync(b => b

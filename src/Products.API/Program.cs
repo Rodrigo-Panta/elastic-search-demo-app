@@ -5,6 +5,7 @@ using Elastic.Transport;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Products.Domain;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,7 @@ builder.Services.AddLogging(configure =>
 var postgreConnectionString = GetEnvironmentVariableOrThrow("POSTGRESQL_CONNECTION_STRING");
 builder.Services.AddDbContext<ProductsDbContext>(options => options.UseNpgsql(postgreConnectionString));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 
 
 
@@ -83,10 +85,26 @@ productsGroup.MapPost("/indices", async (IProductIndexer indexer) =>
 
 });
 
-productsGroup.MapPost("/", async (IProductRepository repository,IEventBus eventBus, [FromBody] CreateProductRequestDto request) =>
+productsGroup.MapPost("/", async (IProductRepository repository, 
+                                    ICategoryRepository categoryRepository, 
+                                    IEventBus eventBus, [FromBody] 
+                                    CreateProductRequestDto request) =>
 {
-    var product = await repository.CreateProduct(request);
+    var category = await categoryRepository.GetById(request.Categoryid);
+ 
+    if(category == null) return Results.NotFound("CategoryNotFound");
+ 
+    var product = new Product(
+                    await repository.GetNextId(), 
+                    request.Name, 
+                    request.Description, 
+                    category, 
+                    new Price(request.Price), 
+                    new Stock(request.Stock));
+ 
     await eventBus.Publish(new ProductCreatedEvent(product.Id));
+
+    return Results.Ok();
 });
 
 productsGroup.MapGet("/search",
@@ -102,7 +120,17 @@ productsGroup.MapGet("/{id}", async (int id, IProductRepository repository) =>
     var result = await repository.GetById(id);
     if (result == null) return Results.NotFound();
 
-    var response = new GetProductResponseDto(result.Id, result.Name, result.Description, result.Price, result.Stock, result.Createdat, new GetProductCategoryResponseDto(result.Category.Id, result.Category.Name));
+    var response = new GetProductResponseDto(
+                        result.Id, 
+                        result.Name, 
+                        result.Description, 
+                        result.Price.Value, 
+                        result.Stock.Value, 
+                        result.CreatedAt, 
+                        new GetProductCategoryResponseDto(
+                            result.Category.Id, 
+                            result.Category.Name));
+
     return Results.Ok(response);
 });
 

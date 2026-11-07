@@ -11,13 +11,13 @@ public partial class ProductsDbContext : DbContext
     {
     }
 
-    public virtual DbSet<Category> Categories { get; set; }
+    public virtual DbSet<CategoryModel> Categories { get; set; }
 
-    public virtual DbSet<Product> Products { get; set; }
+    public virtual DbSet<ProductModel> Products { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Category>(entity =>
+        modelBuilder.Entity<CategoryModel>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("categories_pk");
 
@@ -31,7 +31,7 @@ public partial class ProductsDbContext : DbContext
                 .HasColumnName("name");
         });
 
-        modelBuilder.Entity<Product>(entity =>
+        modelBuilder.Entity<ProductModel>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("products_pk");
 
