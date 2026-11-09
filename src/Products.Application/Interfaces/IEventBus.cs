@@ -1,3 +1,5 @@
+namespace Products.Application;
+
 public interface IEventBus
 {
     Task Publish<T>(

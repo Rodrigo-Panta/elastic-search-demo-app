@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Products.Application;
 
 public class InMemoryEventBus : IEventBus
 {

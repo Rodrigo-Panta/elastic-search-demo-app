@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Products.Domain;
+using Products.Application;
+using MediatR;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -85,26 +87,18 @@ productsGroup.MapPost("/indices", async (IProductIndexer indexer) =>
 
 });
 
-productsGroup.MapPost("/", async (IProductRepository repository, 
-                                    ICategoryRepository categoryRepository, 
-                                    IEventBus eventBus, [FromBody] 
+productsGroup.MapPost("/", async (IMediator mediator, [FromBody] 
                                     CreateProductRequestDto request) =>
 {
-    var category = await categoryRepository.GetById(request.Categoryid);
- 
-    if(category == null) return Results.NotFound("CategoryNotFound");
- 
-    var product = new Product(
-                    await repository.GetNextId(), 
-                    request.Name, 
-                    request.Description, 
-                    category, 
-                    new Price(request.Price), 
-                    new Stock(request.Stock));
- 
-    await eventBus.Publish(new ProductCreatedEvent(product.Id));
+    var result = await mediator.Send(
+        new CreateProductCommand(
+            request.Name, 
+            request.Description, 
+            request.Categoryid, 
+            request.Price, 
+            request.Stock));
 
-    return Results.Ok();
+    return Results.Ok(result);
 });
 
 productsGroup.MapGet("/search",

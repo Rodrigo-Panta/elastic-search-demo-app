@@ -29,6 +29,7 @@ public partial class Product : EntityBase
 
     public  DateTime CreatedAt { get; private set; }
 
+    public IReadOnlyCollection<object> DomainEvents => throw new NotImplementedException();
 
     public void ChangeStock(int amount)
     {
@@ -41,5 +42,4 @@ public partial class Product : EntityBase
         Price = price;
     }
 
-    
 }
