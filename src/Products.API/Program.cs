@@ -16,7 +16,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
-builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddLogging(configure =>
             {
@@ -29,7 +28,10 @@ builder.Services.AddDbContext<ProductsDbContext>(options => options.UseNpgsql(po
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 
-
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+});
 
 var elasticSearchSettings = new ElasticsearchClientSettings(new Uri(GetEnvironmentVariableOrThrow("ELASTICSEARCH_ENDPOINT")))
     .Authentication(new ApiKey("ELASTICSEARCH_APIKEY"));
@@ -60,11 +62,15 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    // 2. Map the OpenAPI JSON endpoint (defaults to /openapi/v1.json)
     app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
+    // 3. Enable Swagger UI middleware pointing to the OpenAPI endpoint
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "My API v1");
+    });
+}
 app.UseHttpsRedirection();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
@@ -81,48 +87,46 @@ app.MapGet("/api", () => $"Products Api - Version: {Environment.GetEnvironmentVa
 
 var productsGroup = app.MapGroup("/api/products");
 
-productsGroup.MapPost("/indices", async (IProductIndexer indexer) =>
+productsGroup.MapPost("/indices", async ([FromServices] IMediator mediator) =>
 {
-    await indexer.CreateIndexIdepotentAsync();
-
+    await mediator.Send(new CreateProductIndexCommand());
 });
 
-productsGroup.MapPost("/", async (IMediator mediator, [FromBody] 
+productsGroup.MapPost("/", async ([FromServices] IMediator mediator, [FromBody]
                                     CreateProductRequestDto request) =>
 {
     var result = await mediator.Send(
         new CreateProductCommand(
-            request.Name, 
-            request.Description, 
-            request.Categoryid, 
-            request.Price, 
+            request.Name,
+            request.Description,
+            request.Categoryid,
+            request.Price,
             request.Stock));
 
     return Results.Ok(result);
 });
 
 productsGroup.MapGet("/search",
-                     async ([AsParameters] SearchProductQueryDto query, IProductIndexer indexer) =>
+                     async ([AsParameters] SearchProductQueryDto query, [FromServices] IMediator mediator) =>
 {
-    var response = await indexer.SearchAsync(query);
-
+    var response = await mediator.Send(new SearchProductsQuery(query));
     return Results.Ok(response);
 });
 
-productsGroup.MapGet("/{id}", async (int id, IProductRepository repository) =>
+productsGroup.MapGet("/{id}", async (int id, [FromServices] IMediator mediator) =>
 {
-    var result = await repository.GetById(id);
+    var result = await mediator.Send(new GetProductQuery(id));
     if (result == null) return Results.NotFound();
 
     var response = new GetProductResponseDto(
-                        result.Id, 
-                        result.Name, 
-                        result.Description, 
-                        result.Price.Value, 
-                        result.Stock.Value, 
-                        result.CreatedAt, 
+                        result.Id,
+                        result.Name,
+                        result.Description,
+                        result.Price,
+                        result.Stock,
+                        result.CreatedAt,
                         new GetProductCategoryResponseDto(
-                            result.Category.Id, 
+                            result.Category.Id,
                             result.Category.Name));
 
     return Results.Ok(response);

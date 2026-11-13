@@ -1,3 +1,5 @@
+using Products.Application;
+
 public class ProductCreatedEventConsumer(
     EventChannel<ProductCreatedEvent> channel,
     IServiceScopeFactory scopeFactory,
@@ -19,7 +21,7 @@ public class ProductCreatedEventConsumer(
                 var indexer = scope.ServiceProvider
                     .GetRequiredService<IProductIndexer>();
 
-                await indexer.AddDocumetentAsync(@event.ProductId);
+                await indexer.AddDocumentAsync(@event.ProductId);
             }
             catch (Exception e)
             {
