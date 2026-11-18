@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Products.API.Data.Models;
 using Products.Domain;
 
-
+namespace Products.Infra;
 
 public class CategoryRepository(ProductsDbContext dbContext) : ICategoryRepository
 {

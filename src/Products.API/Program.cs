@@ -1,12 +1,8 @@
-using Microsoft.EntityFrameworkCore;
-using Products.API.Data.Models;
-using Elastic.Clients.Elasticsearch;
-using Elastic.Transport;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Products.Domain;
 using Products.Application;
+using Products.Infra;
 using MediatR;
 
 
@@ -23,25 +19,13 @@ builder.Services.AddLogging(configure =>
                 configure.SetMinimumLevel(LogLevel.Information);
             });
 
-var postgreConnectionString = GetEnvironmentVariableOrThrow("POSTGRESQL_CONNECTION_STRING");
-builder.Services.AddDbContext<ProductsDbContext>(options => options.UseNpgsql(postgreConnectionString));
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
 });
 
-var elasticSearchSettings = new ElasticsearchClientSettings(new Uri(GetEnvironmentVariableOrThrow("ELASTICSEARCH_ENDPOINT")))
-    .Authentication(new ApiKey("ELASTICSEARCH_APIKEY"));
-
-builder.Services.AddSingleton(serviceProvider => new ElasticsearchClient(elasticSearchSettings));
-builder.Services.AddScoped<IProductIndexer, ElasticSearchProductIndexer>();
-
-builder.Services.AddSingleton<EventChannel<ProductCreatedEvent>>();
-builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
-builder.Services.AddHostedService<ProductCreatedEventConsumer>();
+builder.Services.AddInfra();
 
 builder.Services
     .AddHealthChecks()
@@ -49,13 +33,7 @@ builder.Services
         "self",
         () => HealthCheckResult.Healthy(),
         tags: ["live"])
-    .AddNpgSql(
-        postgreConnectionString,
-        name: "postgres",
-        tags: ["ready"])
-    .AddCheck<ElasticsearchHealthCheck>(
-         "elasticsearch",
-        tags: ["ready"]);
+    .AddInfraHealthChecks();
 
 var app = builder.Build();
 
@@ -133,13 +111,3 @@ productsGroup.MapGet("/{id}", async (int id, [FromServices] IMediator mediator) 
 });
 
 app.Run();
-
-static string GetEnvironmentVariableOrThrow(string name)
-{
-    var value = Environment.GetEnvironmentVariable(name);
-
-    if (string.IsNullOrWhiteSpace(value)) throw new InvalidDataException($"The environment variable {name} must be defined");
-
-    return value;
-
-}

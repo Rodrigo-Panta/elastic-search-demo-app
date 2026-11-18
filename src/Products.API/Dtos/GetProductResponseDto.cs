@@ -1,2 +1,2 @@
-public record GetProductResponseDto (int Id, string Name, string Description, decimal Price, int Stock, DateTime CreatedAt, GetProductCategoryResponseDto Category);
-public record GetProductCategoryResponseDto (int id, string name);
+public record GetProductResponseDto(int Id, string Name, string Description, decimal Price, int Stock, DateTime CreatedAt, GetProductCategoryResponseDto Category);
+public record GetProductCategoryResponseDto(int id, string name);

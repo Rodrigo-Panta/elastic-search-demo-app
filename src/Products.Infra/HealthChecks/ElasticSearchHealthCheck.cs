@@ -1,6 +1,8 @@
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
+namespace Products.Infra;
+
 public sealed class ElasticsearchHealthCheck(ElasticsearchClient client) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(

@@ -1,4 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Products.Application;
+
+namespace Products.Infra;
 
 public class ProductCreatedEventConsumer(
     EventChannel<ProductCreatedEvent> channel,

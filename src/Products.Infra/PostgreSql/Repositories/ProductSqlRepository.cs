@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Products.API.Data.Models;
 using Products.Domain;
 
-
+namespace Products.Infra;
 
 public class ProductRepository(ProductsDbContext dbContext) : IProductRepository
 {
@@ -31,8 +30,8 @@ public class ProductRepository(ProductsDbContext dbContext) : IProductRepository
                                                             .Include(p => p.Category).FirstOrDefaultAsync())?
                                                             .ToEntity();
 
-    public async Task<int> GetNextId() => await dbContext.Products.CountAsync() > 0 
-                                            ? await dbContext.Products.MaxAsync(p => p.Id) + 1 
+    public async Task<int> GetNextId() => await dbContext.Products.CountAsync() > 0
+                                            ? await dbContext.Products.MaxAsync(p => p.Id) + 1
                                             : 1;
 
     public async Task<PagedResult<Product>> GetPaged(PagedRequest request)

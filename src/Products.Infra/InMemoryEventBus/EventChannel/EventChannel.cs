@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+namespace Products.Infra;
 
 public class EventChannel<TEvent> : IEventChannel
 {

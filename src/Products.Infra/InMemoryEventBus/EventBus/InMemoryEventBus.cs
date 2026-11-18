@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using System.Threading.Channels;
 using Products.Application;
 
+namespace Products.Infra;
 public class InMemoryEventBus : IEventBus
 {
 

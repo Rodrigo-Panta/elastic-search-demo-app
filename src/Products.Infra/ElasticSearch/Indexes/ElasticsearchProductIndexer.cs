@@ -1,6 +1,9 @@
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using Microsoft.Extensions.Logging;
 using Products.Application;
+
+namespace Prodcuts.Infra;
 
 public class ElasticSearchProductIndexer(
     ElasticsearchClient client,
@@ -8,7 +11,6 @@ public class ElasticSearchProductIndexer(
     IProductRepository repository) : IProductIndexer
 {
 
-    private const int INDEX_CREATION_PAGE_SIZE = 500;
     private const string INDEX_NAME = "products";
     private const int QUERY_DEFAULT_MAX_RESULTS = 15;
 
